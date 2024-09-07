@@ -1,0 +1,102 @@
+import {Color} from './Color.ts';
+import {Figure} from './figures/Figure.ts';
+import {Board} from './Board.ts';
+
+let iteratorCells = 0;
+
+export class Cell {
+	readonly x: number;
+	readonly y: number;
+	readonly color: Color;
+	figure: Figure | null;
+	board: Board;
+	available: boolean; // Можешь ли переместиться
+	id: number; // Для реакт ключей
+
+
+	constructor(board: Board, x: number, y: number, color: Color, figure: Figure | null) {
+		this.x = x;
+		this.y = y;
+		this.color = color;
+		this.figure = figure;
+		this.board = board;
+		this.available = false;
+		this.id = iteratorCells;
+		iteratorCells++;
+	}
+
+	isEmpty(): boolean {
+		return this.figure === null;
+	}
+
+	isEnemy(target: Cell): boolean {
+		if(target.figure) {
+			return this.figure?.color !== target.figure?.color;
+		}
+		return false;
+	}
+
+	isAvailableVertical(target: Cell): boolean {
+		if(this.x !== target.x) {
+			return false;
+		}
+
+		const min = Math.min(this.y, target.y);
+		const max = Math.max(this.y, target.y);
+		for(let y = min + 1; y < max; y++) {
+			if(!this.board.getCell(this.x, y).isEmpty()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	isAvailableHorizontal(target: Cell): boolean {
+		if(this.y !== target.y) {
+			return false;
+		}
+
+		const min = Math.min(this.x, target.x);
+		const max = Math.max(this.x, target.x);
+		for(let x = min + 1; x < max; x++) {
+			if(!this.board.getCell(x, this.y).isEmpty()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	isAvailableDiagonal(target: Cell): boolean {
+		const absX = Math.abs(target.x - this.x);
+		const absY = Math.abs(target.y - this.y);
+		if(absY !== absX)
+			return false;
+
+		const dy = this.y < target.y ? 1 : -1;
+		const dx = this.x < target.x ? 1 : -1;
+
+		for(let i = 1; i < absY; i++) {
+			if(!this.board.getCell(this.x + dx * i, this.y + dy * i).isEmpty()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	setFigure(figure: Figure): void {
+		this.figure = figure;
+		this.figure.cell = this;
+	}
+
+	moveFigure(target: Cell): void {
+		if(this.figure && this.figure.canMove(target)) {
+			this.figure.moveFigure(target);
+			if(target.figure) {
+				this.board.addLostFigure(target.figure);
+				target.figure.isAlive = false
+			}
+			target.setFigure(this.figure);
+			this.figure = null;
+		}
+	}
+}
